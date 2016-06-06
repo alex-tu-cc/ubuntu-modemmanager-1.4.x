@@ -201,6 +201,9 @@ AM_CONDITIONAL(WITH_POLKIT, [test "x$with_polkit" != "xnone" ])
 dnl
 dnl MBIM support (enabled by default)
 dnl
+
+LIBMBIM_VERSION=1.14.0
+
 AC_ARG_WITH(mbim, AS_HELP_STRING([--without-mbim], [Build without MBIM support]), [], [with_mbim=yes])
 AM_CONDITIONAL(WITH_MBIM, test "x$with_mbim" = "xyes")
 case $with_mbim in
@@ -222,6 +225,8 @@ esac
 dnl
 dnl QMI support (enabled by default)
 dnl
+
+
 AC_ARG_WITH(qmi, AS_HELP_STRING([--without-qmi], [Build without QMI support]), [], [with_qmi=yes])
 AM_CONDITIONAL(WITH_QMI, test "x$with_qmi" = "xyes")
 case $with_qmi in
