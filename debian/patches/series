@@ -1,0 +1,7 @@
+novatel-custom-init.patch
+novatel-common-library.patch
+sierra-common-library.patch
+mbm-common-library.patch
+sierra-custom-init.patch
+new-sierra-legacy-plugin.patch
+dell-mbim-plugin.patch

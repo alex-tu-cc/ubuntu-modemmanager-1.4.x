@@ -1,0 +1,298 @@
+commit 6bbc4c1746c9e7c48e12dcb1e1986f1e16327161
+Author: Aleksander Morgado <aleksander@aleksander.es>
+Date:   Fri Feb 6 20:02:20 2015 +0100
+
+    sierra: move all the legacy Sierra support to a new 'sierra-legacy' plugin
+    
+    In short:
+    
+      * The 'sierra-legacy' plugin will handle all the old AT based modems,
+        including the DirectIP ones. This plugin is filtered by driver ('sierra' or
+        'sierra_net') and forbidden-drivers ('qmi_wwan' and 'cdc_mbim'). This plugin
+        should also grab HP and AT&T branded models if they are handled by the
+        proper kernel driver.
+    
+      * The 'sierra' plugin will only handle QMI or MBIM based Sierra modems, which
+        are really all the new ones. This plugin is filtered by VID (0x1199) and
+        driver (qmi_wwan and cdc_mbim).
+    
+    For this separation to work, the 'sierra' and 'sierra_net' plugins need to be
+    complementary to each other.
+
+---
+ plugins/Makefile.am                      |   18 ++++-
+ plugins/sierra/mm-plugin-sierra-legacy.c |   99 +++++++++++++++++++++++++++++++
+ plugins/sierra/mm-plugin-sierra-legacy.h |   40 ++++++++++++
+ plugins/sierra/mm-plugin-sierra.c        |   34 +++-------
+ 4 files changed, 162 insertions(+), 29 deletions(-)
+
+Index: b/plugins/Makefile.am
+===================================================================
+--- a/plugins/Makefile.am
++++ b/plugins/Makefile.am
+@@ -142,6 +142,7 @@ pkglib_LTLIBRARIES = \
+ 	libmm-plugin-pantech.la \
+ 	libmm-plugin-zte.la \
+ 	libmm-plugin-sierra.la \
++	libmm-plugin-sierra-legacy.la \
+ 	libmm-plugin-mbm.la \
+ 	libmm-plugin-via.la \
+ 	libmm-plugin-telit.la \
+@@ -291,15 +292,22 @@ libmm_utils_sierra_la_LIBADD = $(GUDEV_L
+ SIERRA_COMMON_COMPILER_FLAGS = -I$(top_srcdir)/plugins/sierra
+ SIERRA_COMMON_LIBADD_FLAGS = $(builddir)/libmm-utils-sierra.la
+ 
+-# Sierra
++# Sierra (new QMI or MBIM modems)
+ libmm_plugin_sierra_la_SOURCES = \
+ 	sierra/mm-plugin-sierra.c \
+-	sierra/mm-plugin-sierra.h \
++	sierra/mm-plugin-sierra.h
++libmm_plugin_sierra_la_CPPFLAGS = $(PLUGIN_COMMON_COMPILER_FLAGS)
++libmm_plugin_sierra_la_LDFLAGS = $(PLUGIN_COMMON_LINKER_FLAGS)
++
++# Sierra (legacy)
++libmm_plugin_sierra_legacy_la_SOURCES = \
++	sierra/mm-plugin-sierra-legacy.c \
++	sierra/mm-plugin-sierra-legacy.h \
+ 	sierra/mm-broadband-modem-sierra-icera.c \
+ 	sierra/mm-broadband-modem-sierra-icera.h
+-libmm_plugin_sierra_la_CPPFLAGS = $(PLUGIN_COMMON_COMPILER_FLAGS) $(ICERA_COMMON_COMPILER_FLAGS) $(SIERRA_COMMON_COMPILER_FLAGS)
+-libmm_plugin_sierra_la_LDFLAGS = $(PLUGIN_COMMON_LINKER_FLAGS)
+-libmm_plugin_sierra_la_LIBADD = $(ICERA_COMMON_LIBADD_FLAGS) $(SIERRA_COMMON_LIBADD_FLAGS)
++libmm_plugin_sierra_legacy_la_CPPFLAGS = $(PLUGIN_COMMON_COMPILER_FLAGS) $(ICERA_COMMON_COMPILER_FLAGS) $(SIERRA_COMMON_COMPILER_FLAGS)
++libmm_plugin_sierra_legacy_la_LDFLAGS = $(PLUGIN_COMMON_LINKER_FLAGS)
++libmm_plugin_sierra_legacy_la_LIBADD = $(ICERA_COMMON_LIBADD_FLAGS) $(SIERRA_COMMON_LIBADD_FLAGS)
+ 
+ # Wavecom (Sierra Airlink)
+ libmm_plugin_wavecom_la_SOURCES = \
+Index: b/plugins/sierra/mm-plugin-sierra-legacy.c
+===================================================================
+--- /dev/null
++++ b/plugins/sierra/mm-plugin-sierra-legacy.c
+@@ -0,0 +1,99 @@
++/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
++/*
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details:
++ *
++ * Copyright (C) 2008 - 2009 Novell, Inc.
++ * Copyright (C) 2009 - 2012 Red Hat, Inc.
++ * Copyright (C) 2012 Lanedo GmbH
++ * Copyright (C) 2015 Aleksander Morgado <aleksander@aleksander.es>
++ */
++
++#include <stdlib.h>
++#include <gmodule.h>
++
++#define _LIBMM_INSIDE_MM
++#include <libmm-glib.h>
++
++#include "mm-log.h"
++#include "mm-plugin-sierra-legacy.h"
++#include "mm-common-sierra.h"
++#include "mm-broadband-modem-sierra.h"
++#include "mm-broadband-modem-sierra-icera.h"
++
++G_DEFINE_TYPE (MMPluginSierraLegacy, mm_plugin_sierra_legacy, MM_TYPE_PLUGIN)
++
++int mm_plugin_major_version = MM_PLUGIN_MAJOR_VERSION;
++int mm_plugin_minor_version = MM_PLUGIN_MINOR_VERSION;
++
++/*****************************************************************************/
++
++static MMBaseModem *
++create_modem (MMPlugin *self,
++              const gchar *sysfs_path,
++              const gchar **drivers,
++              guint16 vendor,
++              guint16 product,
++              GList *probes,
++              GError **error)
++{
++    if (mm_common_sierra_port_probe_list_is_icera (probes))
++        return MM_BASE_MODEM (mm_broadband_modem_sierra_icera_new (sysfs_path,
++                                                                   drivers,
++                                                                   mm_plugin_get_name (self),
++                                                                   vendor,
++                                                                   product));
++
++    return MM_BASE_MODEM (mm_broadband_modem_sierra_new (sysfs_path,
++                                                         drivers,
++                                                         mm_plugin_get_name (self),
++                                                         vendor,
++                                                         product));
++}
++
++/*****************************************************************************/
++
++G_MODULE_EXPORT MMPlugin *
++mm_plugin_create (void)
++{
++    static const gchar *subsystems[] = { "tty", "net", NULL };
++    static const gchar *drivers[] = { "sierra", "sierra_net", NULL };
++    static const gchar *forbidden_drivers[] = { "qmi_wwan", "cdc_mbim", NULL };
++    static const MMAsyncMethod custom_init = {
++        .async  = G_CALLBACK (mm_common_sierra_custom_init),
++        .finish = G_CALLBACK (mm_common_sierra_custom_init_finish),
++    };
++
++    return MM_PLUGIN (
++        g_object_new (MM_TYPE_PLUGIN_SIERRA_LEGACY,
++                      MM_PLUGIN_NAME,                "Sierra (legacy)",
++                      MM_PLUGIN_ALLOWED_SUBSYSTEMS,  subsystems,
++                      MM_PLUGIN_ALLOWED_DRIVERS,     drivers,
++                      MM_PLUGIN_FORBIDDEN_DRIVERS,   forbidden_drivers,
++                      MM_PLUGIN_ALLOWED_AT,          TRUE,
++                      MM_PLUGIN_CUSTOM_INIT,         &custom_init,
++                      MM_PLUGIN_ICERA_PROBE,         TRUE,
++                      MM_PLUGIN_REMOVE_ECHO,         FALSE,
++                      NULL));
++}
++
++static void
++mm_plugin_sierra_legacy_init (MMPluginSierraLegacy *self)
++{
++}
++
++static void
++mm_plugin_sierra_legacy_class_init (MMPluginSierraLegacyClass *klass)
++{
++    MMPluginClass *plugin_class = MM_PLUGIN_CLASS (klass);
++
++    plugin_class->create_modem = create_modem;
++    plugin_class->grab_port = mm_common_sierra_grab_port;
++}
+Index: b/plugins/sierra/mm-plugin-sierra-legacy.h
+===================================================================
+--- /dev/null
++++ b/plugins/sierra/mm-plugin-sierra-legacy.h
+@@ -0,0 +1,40 @@
++/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
++/*
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details:
++ *
++ * Copyright (C) 2015 Aleksander Morgado <aleksander@aleksander.es>
++ */
++
++#ifndef MM_PLUGIN_SIERRA_LEGACY_H
++#define MM_PLUGIN_SIERRA_LEGACY_H
++
++#include "mm-plugin.h"
++
++#define MM_TYPE_PLUGIN_SIERRA_LEGACY            (mm_plugin_sierra_legacy_get_type ())
++#define MM_PLUGIN_SIERRA_LEGACY(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), MM_TYPE_PLUGIN_SIERRA_LEGACY, MMPluginSierraLegacy))
++#define MM_PLUGIN_SIERRA_LEGACY_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass),  MM_TYPE_PLUGIN_SIERRA_LEGACY, MMPluginSierraLegacyClass))
++#define MM_IS_PLUGIN_SIERRA_LEGACY(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), MM_TYPE_PLUGIN_SIERRA_LEGACY))
++#define MM_IS_PLUGIN_SIERRA_LEGACY_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass),  MM_TYPE_PLUGIN_SIERRA_LEGACY))
++#define MM_PLUGIN_SIERRA_LEGACY_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj),  MM_TYPE_PLUGIN_SIERRA_LEGACY, MMPluginSierraLegacyClass))
++
++typedef struct {
++    MMPlugin parent;
++} MMPluginSierraLegacy;
++
++typedef struct {
++    MMPluginClass parent;
++} MMPluginSierraLegacyClass;
++
++GType mm_plugin_sierra_legacy_get_type (void);
++
++G_MODULE_EXPORT MMPlugin *mm_plugin_create (void);
++
++#endif /* MM_PLUGIN_SIERRA_LEGACY_H */
+Index: b/plugins/sierra/mm-plugin-sierra.c
+===================================================================
+--- a/plugins/sierra/mm-plugin-sierra.c
++++ b/plugins/sierra/mm-plugin-sierra.c
+@@ -13,6 +13,7 @@
+  * Copyright (C) 2008 - 2009 Novell, Inc.
+  * Copyright (C) 2009 - 2012 Red Hat, Inc.
+  * Copyright (C) 2012 Lanedo GmbH
++ * Copyright (C) 2015 Aleksander Morgado <aleksander@aleksander.es>
+  */
+ 
+ #include <stdlib.h>
+@@ -23,9 +24,6 @@
+ 
+ #include "mm-log.h"
+ #include "mm-plugin-sierra.h"
+-#include "mm-common-sierra.h"
+-#include "mm-broadband-modem-sierra.h"
+-#include "mm-broadband-modem-sierra-icera.h"
+ 
+ #if defined WITH_QMI
+ #include "mm-broadband-modem-qmi.h"
+@@ -73,18 +71,12 @@ create_modem (MMPlugin *self,
+     }
+ #endif
+ 
+-    if (mm_common_sierra_port_probe_list_is_icera (probes))
+-        return MM_BASE_MODEM (mm_broadband_modem_sierra_icera_new (sysfs_path,
+-                                                                   drivers,
+-                                                                   mm_plugin_get_name (self),
+-                                                                   vendor,
+-                                                                   product));
+-
+-    return MM_BASE_MODEM (mm_broadband_modem_sierra_new (sysfs_path,
+-                                                         drivers,
+-                                                         mm_plugin_get_name (self),
+-                                                         vendor,
+-                                                         product));
++    /* Fallback to default modem in the worst case */
++    return MM_BASE_MODEM (mm_broadband_modem_new (sysfs_path,
++                                                  drivers,
++                                                  mm_plugin_get_name (self),
++                                                  vendor,
++                                                  product));
+ }
+ 
+ /*****************************************************************************/
+@@ -93,24 +85,19 @@ G_MODULE_EXPORT MMPlugin *
+ mm_plugin_create (void)
+ {
+     static const gchar *subsystems[] = { "tty", "net", "usb", NULL };
+-    static const gchar *drivers[] = { "sierra", "sierra_net", NULL };
+-    static const MMAsyncMethod custom_init = {
+-        .async  = G_CALLBACK (mm_common_sierra_custom_init),
+-        .finish = G_CALLBACK (mm_common_sierra_custom_init_finish),
+-    };
++    static const guint16 vendor_ids[] = { 0x1199, 0 };
++    static const gchar *drivers[] = { "qmi_wwan", "cdc_mbim", NULL };
+ 
+     return MM_PLUGIN (
+         g_object_new (MM_TYPE_PLUGIN_SIERRA,
+                       MM_PLUGIN_NAME,               "Sierra",
+                       MM_PLUGIN_ALLOWED_SUBSYSTEMS, subsystems,
++                      MM_PLUGIN_ALLOWED_VENDOR_IDS, vendor_ids,
+                       MM_PLUGIN_ALLOWED_DRIVERS,    drivers,
+                       MM_PLUGIN_ALLOWED_AT,         TRUE,
+                       MM_PLUGIN_ALLOWED_QCDM,       TRUE,
+                       MM_PLUGIN_ALLOWED_QMI,        TRUE,
+                       MM_PLUGIN_ALLOWED_MBIM,       TRUE,
+-                      MM_PLUGIN_CUSTOM_INIT,        &custom_init,
+-                      MM_PLUGIN_ICERA_PROBE,        TRUE,
+-                      MM_PLUGIN_REMOVE_ECHO,        FALSE,
+                       NULL));
+ }
+ 
+@@ -125,5 +112,4 @@ mm_plugin_sierra_class_init (MMPluginSie
+     MMPluginClass *plugin_class = MM_PLUGIN_CLASS (klass);
+ 
+     plugin_class->create_modem = create_modem;
+-    plugin_class->grab_port = mm_common_sierra_grab_port;
+ }
