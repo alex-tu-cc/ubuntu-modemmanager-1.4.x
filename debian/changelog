@@ -1,3 +1,9 @@
+modemmanager (1.4.12-1ubuntu4) xenial; urgency=medium
+
+  * build on steamboat3
+
+ -- Alex Tu <alex.tu@canonical.com>  Mon, 22 May 2017 16:04:53 +0800
+
 modemmanager (1.4.12-1ubuntu1) xenial; urgency=medium
 
   * Resynchronize on Debian, remaining changes
