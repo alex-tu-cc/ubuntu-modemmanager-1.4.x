@@ -4,8 +4,9 @@ After=syslog.target
 
 [Service]
 Type=dbus
+Environment=LD_LIBRARY_PATH=/usr/local/lib
 BusName=org.freedesktop.ModemManager1
-ExecStart=@sbindir@/ModemManager
+ExecStart=@sbindir@/ModemManager --debug
 StandardError=null
 Restart=on-abort
 
