@@ -1,0 +1,54 @@
+From 47a99dc8e8425288ff82148446d1d00726eec6a5 Mon Sep 17 00:00:00 2001
+From: Aleksander Morgado <aleksander@aleksander.es>
+Date: Sat, 7 Feb 2015 21:39:00 +0100
+Subject: [PATCH 1/4] broadband-modem-qmi: use 'DMS Set FCC Authentication' if
+ online mode fails
+
+Some new devices, like the Dell DW5770, will return an internal error when
+trying to bring the power mode to online. We can avoid this by sending the
+magic "DMS Set FCC Auth" message before retrying.
+
+Bumping libqmi version to 1.13.4, which is the one that supports this new
+message.
+
+https://bugzilla.kernel.org/show_bug.cgi?id=92101
+
+ Conflicts:
+	configure.ac
+	src/mm-broadband-modem-qmi.c
+---
+ configure.ac                 | 2 +-
+ src/mm-broadband-modem-qmi.c | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index f78e15f..f7ef211 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -226,7 +226,7 @@ AC_ARG_WITH(qmi, AS_HELP_STRING([--without-qmi], [Build without QMI support]), [
+ AM_CONDITIONAL(WITH_QMI, test "x$with_qmi" = "xyes")
+ case $with_qmi in
+     yes)
+-        PKG_CHECK_MODULES(QMI, [qmi-glib >= 1.12.4], [have_qmi=yes],[have_qmi=no])
++        PKG_CHECK_MODULES(QMI, [qmi-glib >= 1.13.4], [have_qmi=yes],[have_qmi=no])
+         if test "x$have_qmi" = "xno"; then
+             AC_MSG_ERROR([Couldn't find libqmi-glib. Install it, or otherwise configure using --without-qmi to disable QMI support.])
+         else
+diff --git a/src/mm-broadband-modem-qmi.c b/src/mm-broadband-modem-qmi.c
+index d306b0e..112e17a 100644
+--- a/src/mm-broadband-modem-qmi.c
++++ b/src/mm-broadband-modem-qmi.c
+@@ -2579,8 +2579,8 @@ dms_set_operating_mode_ready (QmiClientDms *client,
+         return;
+     }
+ 
+-    /* Good! we're done, go to last step */
+-    ctx->step = SET_OPERATING_MODE_STEP_LAST;
++    /* Good! */
++    ctx->step++;
+     set_operating_mode_context_step (ctx);
+ }
+ 
+-- 
+2.11.0
+
