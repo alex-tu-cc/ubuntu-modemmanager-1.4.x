@@ -1,0 +1,45 @@
+From 35e41c2e151e50564f8a15f22371209a78292e3a Mon Sep 17 00:00:00 2001
+From: Aleksander Morgado <aleksander@aleksander.es>
+Date: Tue, 28 Feb 2017 11:13:04 +0100
+Subject: [PATCH 3/4] broadband-modem-qmi: FCC auth if InvalidTransition when
+ going online
+
+https://bugs.freedesktop.org/show_bug.cgi?id=100001
+(cherry picked from commit 21f315f6d554b93e4f098cfd0e94c484a8a0c5dc)
+---
+ src/mm-broadband-modem-qmi.c | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/src/mm-broadband-modem-qmi.c b/src/mm-broadband-modem-qmi.c
+index 112e17a..6490ce1 100644
+--- a/src/mm-broadband-modem-qmi.c
++++ b/src/mm-broadband-modem-qmi.c
+@@ -2557,13 +2557,21 @@ dms_set_operating_mode_ready (QmiClientDms *client,
+     if (!qmi_message_dms_set_operating_mode_output_get_result (output, &error)) {
+         QmiDmsOperatingMode mode;
+ 
+-        /* Some new devices, like the Dell DW5770, will return an internal error when
+-         * trying to bring the power mode to online. We can avoid this by sending the
+-         * magic "DMS Set FCC Auth" message before trying. */
++        /*
++         * Some new devices, like the Dell DW5770, will return an internal error when
++         * trying to bring the power mode to online.
++         *
++         * Other devices, like some rebranded EM7455 modules, will return a "invalid
++         * transition" instead when trying to bring the power mode to online.
++         *
++         * We can avoid this by sending the magic "DMS Set FCC Auth" message before
++         * retrying.
++         */
+         if (ctx->step == SET_OPERATING_MODE_STEP_FIRST &&
+             qmi_message_dms_set_operating_mode_input_get_mode (ctx->input, &mode, NULL) &&
+             mode == QMI_DMS_OPERATING_MODE_ONLINE &&
+-            g_error_matches (error, QMI_PROTOCOL_ERROR, QMI_PROTOCOL_ERROR_INTERNAL)) {
++            (g_error_matches (error, QMI_PROTOCOL_ERROR, QMI_PROTOCOL_ERROR_INTERNAL) ||
++             g_error_matches (error, QMI_PROTOCOL_ERROR, QMI_PROTOCOL_ERROR_INVALID_TRANSITION))) {
+             g_error_free (error);
+             /* Go on to FCC auth */
+             ctx->step++;
+-- 
+2.11.0
+
