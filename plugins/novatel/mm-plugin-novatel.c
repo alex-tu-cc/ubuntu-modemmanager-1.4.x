@@ -28,6 +28,7 @@
 #include <libmm-glib.h>
 
 #include "mm-plugin-novatel.h"
+#include "mm-common-novatel.h"
 #include "mm-private-boxed-types.h"
 #include "mm-broadband-modem-novatel.h"
 #include "mm-log.h"
@@ -181,6 +182,17 @@ novatel_custom_init (MMPortProbe *probe,
 
     custom_init_step (ctx);
 }
+/* Custom commands for AT probing */
+
+/* We need to explicitly flip secondary ports to AT mode.
+ * We also use this command also for checking AT support in the current port.
+ */
+static const MMPortProbeAtCommand custom_at_probe[] = {
+    { "$NWDMAT=1", 3, mm_port_probe_response_processor_is_at },
+    { "$NWDMAT=1", 3, mm_port_probe_response_processor_is_at },
+    { "$NWDMAT=1", 3, mm_port_probe_response_processor_is_at },
+    { NULL }
+};
 
 /*****************************************************************************/
 
@@ -223,8 +235,8 @@ mm_plugin_create (void)
     static const mm_uint16_pair forbidden_products[] = { { 0x1410, 0x9010 }, /* Novatel E362 */
                                                          { 0, 0 } };
     static const MMAsyncMethod custom_init = {
-        .async  = G_CALLBACK (novatel_custom_init),
-        .finish = G_CALLBACK (novatel_custom_init_finish),
+        .async  = G_CALLBACK (mm_common_novatel_custom_init),
+        .finish = G_CALLBACK (mm_common_novatel_custom_init_finish),
     };
 
     return MM_PLUGIN (
