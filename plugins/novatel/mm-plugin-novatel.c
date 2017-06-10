@@ -67,13 +67,13 @@ custom_init_context_complete_and_free (CustomInitContext *ctx)
     g_slice_free (CustomInitContext, ctx);
 }
 
-static gboolean
-novatel_custom_init_finish (MMPortProbe *probe,
-                            GAsyncResult *result,
-                            GError **error)
-{
-    return !g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (result), error);
-}
+//static gboolean
+//novatel_custom_init_finish (MMPortProbe *probe,
+//                            GAsyncResult *result,
+//                            GError **error)
+//{
+//    return !g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (result), error);
+//}
 
 static void custom_init_step (CustomInitContext *ctx);
 
