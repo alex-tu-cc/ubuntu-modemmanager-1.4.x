@@ -160,28 +160,28 @@ custom_init_step (CustomInitContext *ctx)
     custom_init_context_complete_and_free (ctx);
 }
 
-static void
-novatel_custom_init (MMPortProbe *probe,
-                     MMPortSerialAt *port,
-                     GCancellable *cancellable,
-                     GAsyncReadyCallback callback,
-                     gpointer user_data)
-{
-    CustomInitContext *ctx;
-
-    ctx = g_slice_new (CustomInitContext);
-    ctx->result = g_simple_async_result_new (G_OBJECT (probe),
-                                             callback,
-                                             user_data,
-                                             novatel_custom_init);
-    ctx->probe = g_object_ref (probe);
-    ctx->port = g_object_ref (port);
-    ctx->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
-    ctx->nwdmat_retries = 3;
-    ctx->wait_time = 2;
-
-    custom_init_step (ctx);
-}
+//static void
+//novatel_custom_init (MMPortProbe *probe,
+//                     MMPortSerialAt *port,
+//                     GCancellable *cancellable,
+//                     GAsyncReadyCallback callback,
+//                     gpointer user_data)
+//{
+//    CustomInitContext *ctx;
+//
+//    ctx = g_slice_new (CustomInitContext);
+//    ctx->result = g_simple_async_result_new (G_OBJECT (probe),
+//                                             callback,
+//                                             user_data,
+//                                             novatel_custom_init);
+//    ctx->probe = g_object_ref (probe);
+//    ctx->port = g_object_ref (port);
+//    ctx->cancellable = cancellable ? g_object_ref (cancellable) : NULL;
+//    ctx->nwdmat_retries = 3;
+//    ctx->wait_time = 2;
+//
+//    custom_init_step (ctx);
+//}
 /* Custom commands for AT probing */
 
 /* We need to explicitly flip secondary ports to AT mode.
