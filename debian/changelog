@@ -1,3 +1,9 @@
+modemmanager (1.4.12-1ubuntu1oem2) xenial; urgency=medium
+
+  * refine build dependency
+
+ -- Alex Tu <alex.tu@canonical.com>  Thu, 22 Jun 2017 16:32:16 +0800
+
 modemmanager (1.4.12-1ubuntu1oem1) xenial; urgency=medium
 
   * backport qmi over mbim feature, also need libqmi and libmbim be
