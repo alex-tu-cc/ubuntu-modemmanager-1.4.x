@@ -1,3 +1,9 @@
+modemmanager (1.4.12-1ubuntu1oem3) xenial; urgency=medium
+
+  * rebuild for new libqmi.
+
+ -- Alex Tu <alex.tu@canonical.com>  Thu, 22 Jun 2017 19:17:37 +0800
+
 modemmanager (1.4.12-1ubuntu1oem2) xenial; urgency=medium
 
   * refine build dependency
