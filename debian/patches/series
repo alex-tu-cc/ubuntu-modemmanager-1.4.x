@@ -5,6 +5,7 @@ mbm-common-library.patch
 sierra-custom-init.patch
 new-sierra-legacy-plugin.patch
 dell-mbim-plugin.patch
+dell-mbim-plugin-initial-cgmi-retry.patch
 0001-broadband-modem-qmi-use-DMS-Set-FCC-Authentication-i.patch
 0002-broadband-modem-mbim-try-to-use-FCC-Auth-through-QMI.patch
 0003-broadband-modem-qmi-FCC-auth-if-InvalidTransition-wh.patch
