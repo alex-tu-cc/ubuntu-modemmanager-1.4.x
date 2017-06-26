@@ -1,3 +1,10 @@
+modemmanager (1.4.12-1ubuntu1oem2) xenial; urgency=medium
+
+  * pick the one patch from xenial modemmanager
+    1.4.12-1ubuntu1somerville1(LP#1558946)
+
+ -- Alex Tu <alex.tu@canonical.com>  Thu, 29 Jun 2017 14:03:43 +0800
+
 modemmanager (1.4.12-1ubuntu1oem1) xenial; urgency=medium
 
   * backport qmi over mbim feature, also need libqmi and libmbim be
