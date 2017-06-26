@@ -17,8 +17,8 @@ Build-Depends: debhelper (>= 9),
                libglib2.0-dev (>= 2.30.2),
                libgudev-1.0-dev (>= 147),
                libpolkit-gobject-1-dev (>= 0.97),
-               libqmi-glib-dev (>= 1.12.6-1ubuntu1oem1),
-               libqmi-proxy (>= 1.12.6-1ubuntu1oem1),
+               libqmi-glib-dev (>= 1.12.6-1oem1),
+               libqmi-proxy (>= 1.12.6-1oem1),
                libmbim-glib-dev (>= 1.12.2-2ubuntu1oem1),
                libglib2.0-doc,
                valac (>= 0.22),
@@ -30,7 +30,8 @@ Homepage: http://www.freedesktop.org/wiki/Software/ModemManager/
 
 Package: modemmanager
 Architecture: linux-any
-Depends: ${shlibs:Depends},
+Depends: libqmi-glib1 (>= 1.12.6-1oem1), libqmi-proxy (>= 1.12.6-1oem1), libmbim-glib4 (>= 1.12.2-2ubuntu1oem1), libmbim-proxy (>= 1.12.2-2ubuntu1oem1),
+        , ${shlibs:Depends},
          ${misc:Depends},
 Recommends: usb-modeswitch
 Breaks: network-manager (<< 0.9.8.2-1)
