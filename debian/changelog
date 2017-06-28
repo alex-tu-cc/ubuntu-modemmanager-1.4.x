@@ -1,3 +1,9 @@
+modemmanager (1.4.12-1ubuntu1oem6) xenial; urgency=medium
+
+  * bump vertsion
+
+ -- Alex Tu <alex.tu@canonical.com>  Wed, 28 Jun 2017 17:33:35 +0800
+
 modemmanager (1.4.12-1ubuntu1oem5) xenial; urgency=medium
 
   * pick the one patch from xenial modemmanager
